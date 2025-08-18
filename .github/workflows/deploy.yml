@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout code
+      # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -34,12 +34,13 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
-      # Load SSH key and deploy
-      - name: Deploy to VPS
+      # Load SSH key
+      - name: Load SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.STRAPI_DEPLOY }}
 
+      # Sync files and run production on VPS
       - name: Sync files and run production
         run: |
           rsync -avz --delete \
@@ -59,9 +60,11 @@ jobs:
             # Install production dependencies
             /home/hansluber/.nvm/versions/node/v22.14.0/bin/yarn install --production
 
-            # Stop existing Strapi process
-            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 stop strapi || true
+            # Restart Strapi in production mode (start if not exists)
+            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 start /home/hansluber/.nvm/versions/node/v22.14.0/bin/yarn \
+              --name strapi -- run start || \
+            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 restart strapi
 
-            # Start Strapi in production mode
-            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 start /home/hansluber/.nvm/versions/node/v22.14.0/bin/yarn --name strapi -- run start
+            # Save PM2 process for auto-start on reboot
+            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 save
           EOF
