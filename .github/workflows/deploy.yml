@@ -26,7 +26,13 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.STRAPI_DEPLOY }}
 
-      # 4. Sync necessary files to VPS
+      # 4. 
+      - name: Add known hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      # 5. Sync necessary files to VPS
       - name: Deploy to VPS
         run: |
           rsync -avz --delete \
