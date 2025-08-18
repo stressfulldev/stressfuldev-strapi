@@ -62,4 +62,4 @@ jobs:
 
             # Start or restart Strapi in production using ecosystem.config.js
             /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 startOrRestart ecosystem.config.js --env production
-EOF
+          EOF
