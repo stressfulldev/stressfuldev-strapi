@@ -1,0 +1,37 @@
+name: Deploy Strapi to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout your repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Setup SSH key
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.STRAPI_DEPLOY_KEY }}
+
+      # Sync repo with VPS
+      - name: Deploy to VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no hansluber@103.191.63.173 << 'EOF'
+            cd /home/hansluber/stressfuldev-CMS || exit
+            git reset --hard
+            git clean -fd
+            git pull origin main
+            yarn install --production
+            yarn build
+            # Stop existing Strapi if running (adjust if using pm2/systemd)
+            pm2 stop strapi || true
+            # Start Strapi in production
+            pm2 start yarn --name strapi -- run start
+          EOF
