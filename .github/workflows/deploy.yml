@@ -24,7 +24,7 @@ jobs:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.1
         with:
-          ssh-private-key: ${{ secrets.STRAPI_DEPLOY_KEY }}
+          ssh-private-key: ${{ secrets.STRAPI_DEPLOY }}
 
       # 4. Sync necessary files to VPS
       - name: Deploy to VPS
