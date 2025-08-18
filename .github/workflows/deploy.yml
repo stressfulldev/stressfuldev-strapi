@@ -10,28 +10,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout your repo
+      # 1. Checkout your repo
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Setup SSH key
+      # 2. Install dependencies and build Strapi
+      - name: Install & Build Strapi
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+
+      # 3. Setup SSH to VPS
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.1
         with:
           ssh-private-key: ${{ secrets.STRAPI_DEPLOY_KEY }}
 
-      # Sync repo with VPS
+      # 4. Sync necessary files to VPS
       - name: Deploy to VPS
         run: |
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.git' \
+            --exclude '.env' \
+            --exclude '.tmp' \
+            ./ hansluber@103.191.63.173:/home/hansluber/stressfuldev-CMS
+
           ssh -o StrictHostKeyChecking=no hansluber@103.191.63.173 << 'EOF'
-            cd /home/hansluber/stressfuldev-CMS || exit
-            git reset --hard
-            git clean -fd
-            git pull origin main
+            cd /home/hansluber/stressfuldev-CMS
+            # Install production dependencies only
             yarn install --production
-            yarn build
-            # Stop existing Strapi if running (adjust if using pm2/systemd)
+            # Stop existing Strapi process
             pm2 stop strapi || true
-            # Start Strapi in production
+            # Start Strapi in production mode
             pm2 start yarn --name strapi -- run start
           EOF
