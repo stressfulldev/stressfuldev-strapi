@@ -29,8 +29,10 @@ jobs:
         run: yarn build
 
       # Add VPS to known_hosts
-      - name: Add VPS to known_hosts
-        run: ssh-keyscan -H 103.191.63.173 >> ~/.ssh/known_hosts
+      - name: Add known hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
       # Load SSH key and deploy
       - name: Deploy to VPS
