@@ -49,21 +49,23 @@ jobs:
             --exclude '.env' \
             --exclude '.tmp' \
             ./ hansluber@103.191.63.173:/home/hansluber/stressfuldev-CMS
-
+      
           ssh hansluber@103.191.63.173 << 'EOF'
             cd /home/hansluber/stressfuldev-CMS
-
+      
             # Load nvm environment
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
+      
             # Install production dependencies
             /home/hansluber/.nvm/versions/node/v22.14.0/bin/yarn install --production
+      
+            # Start or restart Strapi in production mode
+            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 start \
+              /home/hansluber/.nvm/versions/node/v22.14.0/bin/yarn \
+              --name strapi -- run start --update-env --no-daemon
+          EOF
 
-            # Restart Strapi in production mode (start if not exists)
-            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 start /home/hansluber/.nvm/versions/node/v22.14.0/bin/yarn \
-              --name strapi -- run start || \
-            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 restart strapi
 
             # Save PM2 process for auto-start on reboot
             /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 save
