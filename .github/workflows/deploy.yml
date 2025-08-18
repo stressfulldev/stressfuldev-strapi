@@ -10,30 +10,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout your repo
+      # Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. Install dependencies and build Strapi
-      - name: Install & Build Strapi
-        run: |
-          yarn install --frozen-lockfile
-          yarn build
+      # Set up Node.js on the runner
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
 
-      # 3. Setup SSH to VPS
-      - name: Setup SSH
+      # Install dependencies
+      - name: Install dependencies
+        run: yarn install
+
+      # Build Strapi
+      - name: Build Strapi
+        run: yarn build
+
+      # Add VPS to known_hosts
+      - name: Add VPS to known_hosts
+        run: ssh-keyscan -H 103.191.63.173 >> ~/.ssh/known_hosts
+
+      # Load SSH key and deploy
+      - name: Deploy to VPS
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.STRAPI_DEPLOY }}
 
-      # 4. 
-      - name: Add known hosts
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
-
-      # 5. Sync necessary files to VPS
-      - name: Deploy to VPS
+      - name: Sync files and run production
         run: |
           rsync -avz --delete \
             --exclude 'node_modules' \
@@ -42,12 +47,19 @@ jobs:
             --exclude '.tmp' \
             ./ hansluber@103.191.63.173:/home/hansluber/stressfuldev-CMS
 
-          ssh -o StrictHostKeyChecking=no hansluber@103.191.63.173 << 'EOF'
+          ssh hansluber@103.191.63.173 << 'EOF'
             cd /home/hansluber/stressfuldev-CMS
-            # Install production dependencies only
-            yarn install --production
+
+            # Load nvm environment
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+            # Install production dependencies
+            /home/hansluber/.nvm/versions/node/v22.14.0/bin/yarn install --production
+
             # Stop existing Strapi process
-            pm2 stop strapi || true
+            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 stop strapi || true
+
             # Start Strapi in production mode
-            pm2 start yarn --name strapi -- run start
+            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 start /home/hansluber/.nvm/versions/node/v22.14.0/bin/yarn --name strapi -- run start
           EOF
