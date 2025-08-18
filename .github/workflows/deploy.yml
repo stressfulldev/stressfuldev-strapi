@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repository
+      # Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -20,11 +20,11 @@ jobs:
         with:
           node-version: '22'
 
-      # Install dependencies
+      # Install dependencies on runner
       - name: Install dependencies
         run: yarn install
 
-      # Build Strapi
+      # Build Strapi admin panel
       - name: Build Strapi
         run: yarn build
 
@@ -34,14 +34,14 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
-      # Load SSH key
+      # Load SSH key for deployment
       - name: Load SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.STRAPI_DEPLOY }}
 
-      # Sync files and run production on VPS
-      - name: Sync files and run production
+      # Sync files to VPS and run Strapi
+      - name: Sync files and start Strapi
         run: |
           rsync -avz --delete \
             --exclude 'node_modules' \
@@ -49,24 +49,17 @@ jobs:
             --exclude '.env' \
             --exclude '.tmp' \
             ./ hansluber@103.191.63.173:/home/hansluber/stressfuldev-CMS
-      
+
           ssh hansluber@103.191.63.173 << 'EOF'
             cd /home/hansluber/stressfuldev-CMS
-      
+
             # Load nvm environment
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-      
+
             # Install production dependencies
             /home/hansluber/.nvm/versions/node/v22.14.0/bin/yarn install --production
-      
-            # Start or restart Strapi in production mode
-            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 start \
-              /home/hansluber/.nvm/versions/node/v22.14.0/bin/yarn \
-              --name strapi -- run start --update-env --no-daemon
-          EOF
 
-
-            # Save PM2 process for auto-start on reboot
-            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 save
-          EOF
+            # Start or restart Strapi in production using ecosystem.config.js
+            /home/hansluber/.nvm/versions/node/v22.14.0/bin/pm2 startOrRestart ecosystem.config.js --env production
+EOF
